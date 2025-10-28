@@ -18,6 +18,10 @@ ENV ANDROID_SDK_ROOT "/sdk"
 ENV ANDROID_NDK_HOME "/ndk"
 ENV PATH "$PATH:${ANDROID_SDK_ROOT}/bin"
 
+# required only for aarch64 build tools installation
+ENV ANDROID_BUILD_TOOLS_X86_VERSION=35.0.0
+ENV ANDROID_BUILD_TOOLS_AARCH64_VERSION=35.0.2
+
 ENV DEBIAN_FRONTEND=noninteractive 
 
 RUN apt-get -qq update && apt-get install -y locales \
@@ -82,3 +86,16 @@ RUN mkdir /tmp/android-ndk && \
     mv ./android-ndk-${NDK_VERSION} ${ANDROID_NDK_HOME} && \
     cd ${ANDROID_NDK_HOME} && \
     rm -rf /tmp/android-ndk
+
+# Install aarch64-specific build tools if running on aarch64/arm64 architecture
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools..." && \
+        mkdir aarch64 && \
+        cd aarch64 && \
+        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
+        unzip sdk.zip && \
+        mv build-tools/* /sdk/build-tools/${ANDROID_BUILD_TOOLS_X86_VERSION}/ && \
+        cd .. && \
+        rm -fr aarch64; \
+    fi
