@@ -19,8 +19,10 @@ ENV ANDROID_NDK_HOME "/ndk"
 ENV PATH "$PATH:${ANDROID_SDK_ROOT}/bin"
 
 # required only for aarch64 build tools installation
-ENV ANDROID_BUILD_TOOLS_X86_VERSION=35.0.0
-ENV ANDROID_BUILD_TOOLS_AARCH64_VERSION=35.0.2
+ENV ANDROID_35_BUILD_TOOLS_X86_VERSION=35.0.0
+ENV ANDROID_35_BUILD_TOOLS_AARCH64_VERSION=35.0.2
+ENV ANDROID_34_BUILD_TOOLS_X86_VERSION=34.0.0
+ENV ANDROID_34_BUILD_TOOLS_AARCH64_VERSION=34.0.3
 
 ENV DEBIAN_FRONTEND=noninteractive 
 
@@ -90,12 +92,20 @@ RUN mkdir /tmp/android-ndk && \
 # Install aarch64-specific build tools if running on aarch64/arm64 architecture
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools..." && \
+        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools for Android ${ANDROID_35_BUILD_TOOLS_X86_VERSION}..." && \
         mkdir aarch64 && \
         cd aarch64 && \
-        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
+        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_35_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
         unzip sdk.zip && \
-        mv build-tools/* /sdk/build-tools/${ANDROID_BUILD_TOOLS_X86_VERSION}/ && \
+        mv build-tools/* /sdk/build-tools/${ANDROID_35_BUILD_TOOLS_X86_VERSION}/ && \
+        cd .. && \
+        rm -fr aarch64 && \
+        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools for Android ${ANDROID_34_BUILD_TOOLS_X86_VERSION}..." && \
+        mkdir aarch64 && \
+        cd aarch64 && \
+        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_34_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
+        unzip sdk.zip && \
+        mv build-tools/* /sdk/build-tools/${ANDROID_34_BUILD_TOOLS_X86_VERSION}/ && \
         cd .. && \
         rm -fr aarch64; \
     fi
