@@ -33,3 +33,5 @@ jobs:
           push: true
           tags: |
             nicolabeghin/gitlab-ci-android:latest
+            nicolabeghin/gitlab-ci-android:35
+            nicolabeghin/gitlab-ci-android:34
