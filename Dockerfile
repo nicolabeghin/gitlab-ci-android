@@ -11,6 +11,9 @@
 FROM ubuntu:20.04
 LABEL maintainer inovex GmbH
 
+# Build argument to specify Android API level
+ARG ANDROID_LEVEL=35
+
 ENV NDK_VERSION r25c
 ENV REPO_SHA256 6cba294d6218bbd4a1500598207b3979c752c7a122aef9429e4d7fef688833b5
 
@@ -18,11 +21,8 @@ ENV ANDROID_SDK_ROOT "/sdk"
 ENV ANDROID_NDK_HOME "/ndk"
 ENV PATH "$PATH:${ANDROID_SDK_ROOT}/bin"
 
-# required only for aarch64 build tools installation
-ENV ANDROID_35_BUILD_TOOLS_X86_VERSION=35.0.0
-ENV ANDROID_35_BUILD_TOOLS_AARCH64_VERSION=35.0.2
-ENV ANDROID_34_BUILD_TOOLS_X86_VERSION=34.0.0
-ENV ANDROID_34_BUILD_TOOLS_AARCH64_VERSION=34.0.3
+# Android level from build arg
+ENV ANDROID_LEVEL=${ANDROID_LEVEL}
 
 ENV DEBIAN_FRONTEND=noninteractive 
 
@@ -64,9 +64,14 @@ RUN export CMD_LINE_TOOLS_VERSION="$(curl -s https://developer.android.com/studi
   unzip /tools.zip -d /sdk && \
   rm -v /tools.zip
 
-# Copy pkg.txt to sdk folder and create repositories.cfg
-ADD pkg.txt /sdk
-RUN mkdir -p /root/.android && touch /root/.android/repositories.cfg
+# Generate pkg.txt dynamically based on ANDROID_LEVEL and create repositories.cfg
+RUN mkdir -p /root/.android && touch /root/.android/repositories.cfg && \
+  echo "build-tools;${ANDROID_LEVEL}.0.0" > /sdk/pkg.txt && \
+  echo "platforms;android-${ANDROID_LEVEL}" >> /sdk/pkg.txt && \
+  echo "extras;android;m2repository" >> /sdk/pkg.txt && \
+  echo "extras;google;google_play_services" >> /sdk/pkg.txt && \
+  echo "extras;google;m2repository" >> /sdk/pkg.txt && \
+  echo "add-ons;addon-google_apis-google-24" >> /sdk/pkg.txt
 
 RUN mkdir -p $ANDROID_SDK_ROOT/licenses/ \
   && echo "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license \
@@ -92,20 +97,20 @@ RUN mkdir /tmp/android-ndk && \
 # Install aarch64-specific build tools if running on aarch64/arm64 architecture
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools for Android ${ANDROID_35_BUILD_TOOLS_X86_VERSION}..." && \
+        echo "Detected aarch64/arm64 architecture, querying GitHub for Android ${ANDROID_LEVEL} build tools..." && \
+        GITHUB_API_URL="https://api.github.com/repos/lzhiyong/android-sdk-tools/releases" && \
+        RELEASE_DATA=$(curl -s "${GITHUB_API_URL}") && \
+        AARCH64_VERSION=$(echo "${RELEASE_DATA}" | grep -oP "\"tag_name\":\s*\"${ANDROID_LEVEL}\.\d+\.\d+\"" | head -1 | grep -oP "${ANDROID_LEVEL}\.\d+\.\d+") && \
+        if [ -z "${AARCH64_VERSION}" ]; then \
+            echo "Error: No aarch64 build tools found for Android level ${ANDROID_LEVEL}" && \
+            exit 1; \
+        fi && \
+        echo "Found aarch64 build tools version ${AARCH64_VERSION} for Android ${ANDROID_LEVEL}" && \
         mkdir aarch64 && \
         cd aarch64 && \
-        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_35_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
+        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
         unzip sdk.zip && \
-        mv build-tools/* /sdk/build-tools/${ANDROID_35_BUILD_TOOLS_X86_VERSION}/ && \
-        cd .. && \
-        rm -fr aarch64 && \
-        echo "Detected aarch64/arm64 architecture, installing aarch64 build tools for Android ${ANDROID_34_BUILD_TOOLS_X86_VERSION}..." && \
-        mkdir aarch64 && \
-        cd aarch64 && \
-        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${ANDROID_34_BUILD_TOOLS_AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
-        unzip sdk.zip && \
-        mv build-tools/* /sdk/build-tools/${ANDROID_34_BUILD_TOOLS_X86_VERSION}/ && \
+        mv build-tools/* /sdk/build-tools/${ANDROID_LEVEL}.0.0/ && \
         cd .. && \
         rm -fr aarch64; \
     fi

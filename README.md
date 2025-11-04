@@ -5,10 +5,34 @@ https://hub.docker.com/r/inovex/gitlab-ci-android/
 Contains the Android SDK, NDK and common packages necessary for building Android Apps in Gitlab CI (for example).
 Make sure caching is enabled for the CI environment to speed up builds.
 
+## Building for Specific Android Levels
+
+The Docker image supports building for different Android API levels via the `ANDROID_LEVEL` build argument (default: 35).
+
+```bash
+# Build for Android 34
+docker build --build-arg ANDROID_LEVEL=34 -t gitlab-ci-android:34 .
+
+# Build for Android 35 (default)
+docker build -t gitlab-ci-android:35 .
+
+# Build for multiple platforms
+docker buildx build --build-arg ANDROID_LEVEL=34 --platform linux/amd64,linux/arm64 -t gitlab-ci-android:34 .
+```
+
+Available pre-built images on Docker Hub include Android levels 33, 34, and 35.
+
+## Usage in GitLab CI
+
 Example yml which has dependency caching enabled:
 
-```
-image: inovex/gitlab-ci-android
+```yaml
+# Use default image (Android 35)
+image: inovex/gitlab-ci-android:latest
+
+# Or use a specific Android level
+# image: inovex/gitlab-ci-android:34
+# image: inovex/gitlab-ci-android:33
 
 stages:
 - release

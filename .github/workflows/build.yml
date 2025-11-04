@@ -5,6 +5,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        android_level: [33, 34, 35]
     steps:
       - uses: actions/checkout@v5
 
@@ -25,13 +28,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push
+      - name: Build and Push Android ${{ matrix.android_level }}
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64, linux/arm64
           push: true
+          build-args: |
+            ANDROID_LEVEL=${{ matrix.android_level }}
           tags: |
-            nicolabeghin/gitlab-ci-android:latest
-            nicolabeghin/gitlab-ci-android:35
-            nicolabeghin/gitlab-ci-android:34
+            nicolabeghin/gitlab-ci-android:${{ matrix.android_level }}
+            ${{ matrix.android_level == 35 && 'nicolabeghin/gitlab-ci-android:latest' || '' }}
