@@ -101,23 +101,25 @@ RUN mkdir /tmp/android-ndk &&\
     cd ${ANDROID_NDK_HOME} &&\
     rm -rf /tmp/android-ndk
 
-# Install aarch64-specific build tools if running on aarch64/arm64 architecture
-RUN ARCH=$(uname -m) && \
+# install aarch64-specific build tools if running on aarch64/arm64 architecture
+RUN ARCH=$(uname -m) &&\
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        echo "Detected aarch64/arm64 architecture, querying GitHub for Android ${ANDROID_LEVEL} build tools..." && \
-        GITHUB_API_URL="https://api.github.com/repos/lzhiyong/android-sdk-tools/releases" && \
-        RELEASE_DATA=$(curl -s "${GITHUB_API_URL}") && \
-        AARCH64_VERSION=$(echo "${RELEASE_DATA}" | grep -oP "\"tag_name\":\s*\"${ANDROID_LEVEL}\.\d+\.\d+\"" | head -1 | grep -oP "${ANDROID_LEVEL}\.\d+\.\d+") && \
+        echo "Detected aarch64/arm64 architecture, querying GitHub for Android ${ANDROID_LEVEL} build tools..." &&\
+        AARCH64_VERSION=$(curl -s ${AARCH64_SDK_TOOLS_RELEASES_URL} | grep -oP "\"tag_name\":\s*\"${ANDROID_LEVEL}\.\d+\.\d+\"" | head -1 | grep -oP "${ANDROID_LEVEL}\.\d+\.\d+") &&\
         if [ -z "${AARCH64_VERSION}" ]; then \
-            echo "Error: No aarch64 build tools found for Android level ${ANDROID_LEVEL}" && \
+            echo "Error: No aarch64 build tools found for Android level ${ANDROID_LEVEL}" &&\
             exit 1; \
-        fi && \
-        echo "Found aarch64 build tools version ${AARCH64_VERSION} for Android ${ANDROID_LEVEL}" && \
-        mkdir aarch64 && \
-        cd aarch64 && \
-        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip && \
-        unzip sdk.zip && \
-        mv build-tools/* /sdk/build-tools/${ANDROID_LEVEL}.0.0/ && \
-        cd .. && \
+        fi &&\
+        echo "Found aarch64 build tools version ${AARCH64_VERSION} for Android ${ANDROID_LEVEL}" &&\
+        mkdir aarch64 &&\
+        cd aarch64 &&\
+        curl -L -o sdk.zip https://github.com/lzhiyong/android-sdk-tools/releases/download/${AARCH64_VERSION}/android-sdk-tools-static-aarch64.zip &&\
+        unzip sdk.zip &&\
+        AARCH64_BUILD_TOOLS_FOLDER=build-tools &&\
+        if [ -d "aarch64" ]; then \
+          AARCH64_BUILD_TOOLS_FOLDER=aarch64/${AARCH64_BUILD_TOOLS_FOLDER}; \
+        fi &&\
+        mv ${AARCH64_BUILD_TOOLS_FOLDER}/* /sdk/build-tools/${ANDROID_LEVEL}.0.0/ &&\
+        cd .. &&\
         rm -fr aarch64; \
     fi
